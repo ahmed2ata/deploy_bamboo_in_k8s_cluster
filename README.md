@@ -163,10 +163,8 @@ kubectl apply -f bamboo-service.yaml
 
 ---
 
-## Notes
 - **Security**: Ensure sensitive credentials (e.g., database password) are managed securely (consider using Kubernetes Secrets).
 - **Customization**: Adjust storage size, replicas, or ports as per your requirements.
 - **Scaling**: This guide deploys a single Bamboo instance. For production, consider scaling and setting up proper ingress.
 
-Happy deploying!
 
