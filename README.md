@@ -1,21 +1,48 @@
-# deploy_bamboo_in_k8s_cluster
-deploying bamboo in k8s cluster using helm,k8s and ngrok
+Deploy Bamboo in a Kubernetes Cluster
+
+This guide provides step-by-step instructions for deploying Atlassian Bamboo in a Kubernetes cluster using Helm, Kubernetes manifests, and Ngrok for external access.
+
+Prerequisites
+
+A running Kubernetes cluster.
+
+kubectl installed and configured.
+
+Helm installed and configured.
+
+Ngrok installed (sign up and set up via Ngrok Setup).
+
+Steps to Deploy Bamboo
 
 1. Create a Namespace
-Define a dedicated namespace for Bamboo.
+
+Create a dedicated namespace for the Bamboo deployment:
+
 kubectl create namespace bamboo
 
-2. Prepare and deploy the Database"PostgreSQL"using Helm.
+2. Deploy PostgreSQL Database Using Helm
+
+Install PostgreSQL using the Bitnami Helm chart:
+
 helm repo add bitnami https://charts.bitnami.com/bitnami
 helm install bamboo-postgres bitnami/postgresql --namespace bamboo \
   --set auth.username=bamboo,auth.password=securepassword,auth.database=bamboo
 
-3- create the pv and the pvc to presist the data as shown
-but first apply this 2 commands : 
+3. Create Persistent Volume (PV) and Persistent Volume Claim (PVC)
+
+Persistent storage is required for Bamboo to retain data.
+
+Create the Host Directory
+
+Run the following commands on your Kubernetes nodes:
+
 sudo mkdir -p /mnt/data/bamboo
 sudo chmod -R 777 /mnt/data/bamboo
 
-# bamboo-pv.yaml
+Apply the PV and PVC Configurations
+
+bamboo-pv.yaml:
+
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -32,8 +59,8 @@ spec:
   hostPath:
     path: /mnt/data/bamboo
 
----
-# bamboo-pvc.yaml
+bamboo-pvc.yaml:
+
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -43,12 +70,20 @@ spec:
   accessModes:
     - ReadWriteOnce
   resources:
-    requests:
-      storage: 10Gi
+      requests:
+        storage: 10Gi
 
+Apply the files:
 
-4- create a deployment for bamboo as show
-# bamboo-deployment.yaml
+kubectl apply -f bamboo-pv.yaml
+kubectl apply -f bamboo-pvc.yaml
+
+4. Deploy Bamboo
+
+Create a deployment for Bamboo with the following configuration:
+
+bamboo-deployment.yaml:
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -85,7 +120,17 @@ spec:
         - name: bamboo-data
           persistentVolumeClaim:
             claimName: bamboo-pvc
-5- create a nodeport service for this bamboo deployment
+
+Apply the deployment:
+
+kubectl apply -f bamboo-deployment.yaml
+
+5. Create a NodePort Service
+
+Expose the Bamboo deployment using a NodePort service:
+
+bamboo-service.yaml:
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -102,6 +147,24 @@ spec:
       targetPort: 8085 # Bamboo container port
       nodePort: 32085  # External access NodePort
 
-6- sign up with ngrok at https://dashboard.ngrok.com/get-started/setup/linux     
-then expose the deployment with ngrok http http://localhost:32085 
-      
+Apply the service:
+
+kubectl apply -f bamboo-service.yaml
+
+6. Expose Bamboo with Ngrok
+
+Start Ngrok and expose the NodePort service:
+
+ngrok http http://localhost:32085
+
+Copy the public Ngrok URL displayed in the terminal (e.g., https://<random-id>.ngrok.io).
+
+Access Bamboo using the Ngrok URL in your browser.
+
+Notes
+
+Security: Ensure sensitive credentials (e.g., database password) are managed securely (consider using Kubernetes Secrets).
+
+Customization: Adjust storage size, replicas, or ports as per your requirements.
+
+Scaling: This guide deploys a single Bamboo instance. For production, consider scaling and setting up proper ingress.
